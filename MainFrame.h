@@ -36,11 +36,13 @@ private:
 	void sendToCPU();
 	void sendToWaitBox();
 	void sendToReadyBox(Process& process);
-	void finishProcess();
-	void checkForIO();
+	void finishProcessFCFS();
+	void finishProcessRR();
+	bool checkForIO();
 	void checkWaitQueue();
 	void checkReadyQueue();
 	void onePassFCFS();
+	void onePassRR();
 
 	// Event Handlers
 	void onAddProcess(wxCommandEvent& evt);
@@ -65,6 +67,7 @@ private:
 	// Vector to hold created processes
 	std::vector<Process> createdProcessesVector;
 	std::vector<Process> finishedProcesses;
+	std::vector<Process> temp;
 	
 	// Queues for holding and displaying Processes
 	std::queue<Process> readyQueue;
@@ -87,6 +90,10 @@ private:
 	wxStaticText* processBurstTimeLabel;
 	wxStaticText* processPriorityLabel;
 
+	wxStaticText* quantTimeLabel;
+	
+	wxStaticText* testCurrentTime;
+
 	
 
 	// Process Modifaction controls
@@ -95,6 +102,9 @@ private:
 	wxSpinCtrl* processBurstTime;
 	wxSpinCtrl* processPriority;
 	wxCheckBox* processInputOutput;
+	wxCheckBox* processAltInputOutput;
+	wxSpinCtrl* quantTime;
+
 	
 	// Boxes that are physical representations of queues
 	wxListBox* processesBox;
@@ -118,5 +128,6 @@ private:
 	
 	// Results - Average Wait Time
 	wxStaticText* averageWait;
+
 };
 

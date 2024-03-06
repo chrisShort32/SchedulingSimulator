@@ -20,9 +20,6 @@ MainFrame::MainFrame(const wxString& title) : wxFrame(nullptr, wxID_ANY, title)
 	bindEventHandlers();
 	createGrid();
 	
-
-
-	
 }
 
 
@@ -66,14 +63,22 @@ void MainFrame::createControls()
 	processArrivalTimeLabel = new wxStaticText(panel, wxID_ANY, "Arrival Time:", wxPoint(200, 75));
 	processBurstTimeLabel = new wxStaticText(panel, wxID_ANY, "Burst Time:", wxPoint(200, 100));
 	processPriorityLabel = new wxStaticText(panel, wxID_ANY, "Priority:", wxPoint(200, 125));
+	
+	quantTimeLabel = new wxStaticText(panel, wxID_ANY, "CPU Time:", wxPoint(200, 150));
+	//quantTimeLabel->Hide();
 
 	// Add process - attribute modifiers
 	processID = new wxTextCtrl(panel, wxID_ANY, "Process1", wxPoint(266, 50), wxSize(115, -1), wxALIGN_LEFT);
-	processArrivalTime = new wxSpinCtrl(panel, wxID_ANY, "", wxPoint(269, 75), wxSize(115, -1), wxSP_ARROW_KEYS, 1, 25, 1);
+	processArrivalTime = new wxSpinCtrl(panel, wxID_ANY, "", wxPoint(269, 75), wxSize(115, -1), wxSP_ARROW_KEYS, 0, 25, 0);
 	processBurstTime = new wxSpinCtrl(panel, wxID_ANY, "", wxPoint(269, 100), wxSize(115, -1), wxSP_ARROW_KEYS, 1, 10, 3);
 	processPriority = new wxSpinCtrl(panel, wxID_ANY, "", wxPoint(269, 125), wxSize(115, -1), wxSP_ARROW_KEYS, 1, 5, 1);
-	processInputOutput = new wxCheckBox(panel, wxID_ANY,"I/O Required:", wxPoint(250, 150), wxSize(115,-1), wxALIGN_RIGHT);
 	
+	//processInputOutput = new wxCheckBox(panel, wxID_ANY,"I/O Required:", wxPoint(250, 150), wxSize(115,-1), wxALIGN_RIGHT);
+	processAltInputOutput = new wxCheckBox(panel, wxID_ANY, "I/O Required:", wxPoint(250, 175), wxSize(115, -1), wxALIGN_RIGHT);
+	//processAltInputOutput->Hide();
+	quantTime = new wxSpinCtrl(panel, wxID_ANY, "", wxPoint(269, 150), wxSize(115, -1), wxSP_ARROW_KEYS, 1, 6, 1);
+	//quantTime->Hide();
+
 	
 	// Add process - list box that contains added processes
 	createdProcessesLabel = new wxStaticText(panel, wxID_ANY, "Created Processes:", wxPoint(500, 25));
@@ -175,12 +180,18 @@ void MainFrame::removeProcess()
 
 void MainFrame::vectorToReadyBox()
 {
-	for (int i = 0; i < createdProcessesVector.size(); i++)
+	for (int i = temp.size() + 1; i < createdProcessesVector.size(); i++)
 	{
-		readyBox->Append(createdProcessesVector[i].getId());
-		readyQueue.push(createdProcessesVector[i]);
-		processesBox->Clear();
+		if (createdProcessesVector[i].getArrivalTime() <= currentTime)
+		{
+			readyBox->Append(createdProcessesVector[i].getId());
+			readyQueue.push(createdProcessesVector[i]);
+			temp.push_back(createdProcessesVector[i]);
+			processesBox->Clear();
+		}
 	}
+	
+
 }
 void MainFrame::sendToCPU()
 {
@@ -206,7 +217,7 @@ void MainFrame::sendToReadyBox(Process& process)
 	readyQueue.push(process);
 	readyBox->Append(process.getId());
 }
-void MainFrame::finishProcess()
+void MainFrame::finishProcessFCFS()
 {
 	int finishTime, waitTime;
 	
@@ -215,6 +226,15 @@ void MainFrame::finishProcess()
 
 	currentTime = max(currentTime, finishedProcesses[j-1].getArrivalTime());
 	finishTime = currentTime + finishedProcesses[j-1].getBurstTime();
+	
+	int temp = currentTime;
+	while(currentTime < finishTime)
+	{
+		vectorToReadyBox();
+		currentTime++;
+	}
+	
+	currentTime = temp;
 	if (j == 1)
 	{
 		waitTime = 0;
@@ -226,6 +246,7 @@ void MainFrame::finishProcess()
 
 	totalWaitTime += waitTime;
 	currentTime = finishTime;
+	//vectorToReadyBox();
 
 	grid->SetCellValue(j, 0, finishedProcesses[j-1].getId());
 	grid->SetCellValue(j, 1, std::to_string(finishedProcesses[j-1].getArrivalTime()));
@@ -237,20 +258,62 @@ void MainFrame::finishProcess()
 	wxString averageWaitMessage = "Average Wait Time: " + wxString::Format("%.3f", AVG_WAIT_TIME);
 	averageWait = new wxStaticText(panel, wxID_ANY, averageWaitMessage, wxPoint(450, 550));
 }
-void MainFrame::checkForIO()
+void MainFrame::finishProcessRR()
+{
+	
+	int remain = CPUprocess.getRemainingTime() - quantTime->GetValue();
+	
+	if (remain > 0)
+	{
+		currentTime += quantTime->GetValue();
+		vectorToReadyBox();
+		CPUprocess.setRemainingTime(remain);
+		sendToReadyBox(CPUprocess);
+		processor->Clear();
+		finishedProcesses.pop_back();
+		
+		
+	}
+	else
+	{
+		int finishTime, waitTime, turnAroundtime;
+
+		int j = finishedProcesses.size();
+		processor->Delete(0);
+
+		currentTime = max(currentTime, finishedProcesses[j - 1].getArrivalTime());
+		finishTime = currentTime + finishedProcesses[j - 1].getRemainingTime();
+		turnAroundtime = finishTime - finishedProcesses[j - 1].getArrivalTime();
+		waitTime = turnAroundtime - finishedProcesses[j - 1].getBurstTime();
+		
+		
+		totalWaitTime += waitTime;
+		currentTime = finishTime;
+		
+		
+		
+		grid->SetCellValue(j, 0, finishedProcesses[j - 1].getId());
+		grid->SetCellValue(j, 1, std::to_string(finishedProcesses[j - 1].getArrivalTime()));
+		grid->SetCellValue(j, 2, std::to_string(finishTime));
+		grid->SetCellValue(j, 3, std::to_string(waitTime));
+
+		AVG_WAIT_TIME = static_cast<double>(totalWaitTime) / static_cast<double>(finishedProcesses.size());
+
+		wxString averageWaitMessage = "Average Wait Time: " + wxString::Format("%.3f", AVG_WAIT_TIME);
+		averageWait = new wxStaticText(panel, wxID_ANY, averageWaitMessage, wxPoint(450, 550));
+	}
+	
+}
+bool MainFrame::checkForIO()
 {
 	// process needs IO - send to wait
 	if (CPUprocess.getWaitForIO())
 	{
 		sendToWaitBox();
 		IOButton->Show();
+		return true;
 	}
-	else
-	{
-		finishedProcesses.push_back(CPUprocess);
-		finishProcess();
-		
-	}
+	return false;
 }
 void MainFrame::checkWaitQueue()
 {
@@ -291,7 +354,15 @@ void MainFrame::onePassFCFS()
 	switch (stepNumber)
 	{
 	case 0:
+		
+		addProcessButton->Disable();
+		removeProcessButton->Disable();
+
+		std::sort(createdProcessesVector.begin(), createdProcessesVector.end());
+		currentTime = createdProcessesVector[0].getArrivalTime();
+		sendToReadyBox(createdProcessesVector[0]);
 		vectorToReadyBox();
+		
 		stepNumber++;
 		break;
 	case 1:
@@ -299,9 +370,47 @@ void MainFrame::onePassFCFS()
 		stepNumber++;
 		break;
 	case 2:
-		checkForIO();
+		if (!checkForIO())
+		{
+			finishedProcesses.push_back(CPUprocess);
+			finishProcessFCFS();
+		}
 		checkReadyQueue();
 		stepNumber = 1;
+		break;
+	}
+}
+
+void MainFrame::onePassRR()
+{
+	
+	switch (stepNumber)
+	{
+	case 0:
+		
+		addProcessButton->Disable();
+		removeProcessButton->Disable();
+
+		sendToReadyBox(createdProcessesVector[0]);
+		currentTime = createdProcessesVector[0].getArrivalTime();
+		vectorToReadyBox();
+		stepNumber++;
+		break;
+	case  1:
+		sendToCPU();
+		stepNumber++;
+		break;
+	case 2:
+		if (!checkForIO())
+		{
+			finishedProcesses.push_back(CPUprocess);
+			finishProcessRR();
+		}
+		
+		checkReadyQueue();
+		stepNumber = 1;
+		// test -- If want to display current time, do it here
+		//testCurrentTime = new wxStaticText(panel, wxID_ANY, std::to_string(currentTime), wxPoint(350, 550));
 		break;
 	}
 }
@@ -317,13 +426,14 @@ void MainFrame::onAddProcess(wxCommandEvent& evt)
 	std::string id = processID->GetValue().ToStdString();
 	Process process(id, processArrivalTime->GetValue(), processBurstTime->GetValue(), processPriority->GetValue());
 	
-	if (processInputOutput->IsChecked())
+	if (processAltInputOutput->IsChecked())
 	{
 		process.setWaitForIO();
 	}
 	createdProcessesVector.push_back(process);
 	addProcess();
-	processInputOutput->SetValue(false);
+	//processInputOutput->SetValue(false);
+	processAltInputOutput->SetValue(false);
 }
 
 void MainFrame::onRemoveProcess(wxCommandEvent& evt)
@@ -341,6 +451,12 @@ void MainFrame::onStart(wxCommandEvent& evt)
 		{
 			onePassFCFS();
 		}
+		break;
+	case 1:
+		while (finishedProcesses.size() != createdProcessesVector.size())
+		{
+			onePassRR();
+		}
 	}
 	
 	wxString averageWaitMessage = "Average Wait Time: " + wxString::Format("%.3f", AVG_WAIT_TIME);
@@ -351,21 +467,34 @@ void MainFrame::onStart(wxCommandEvent& evt)
 void MainFrame::onStep(wxCommandEvent& evt)
 {
 	
+	//int quant = quantTime->GetValue();
 	switch (algorithms->GetSelection())
 	{
 	case 0:
 		onePassFCFS();
+		break;
+	case 1:
+		onePassRR();
 		break;
 	}
 }
 
 void MainFrame::onClear(wxCommandEvent& evt)
 {
+	addProcessButton->Enable();
+	removeProcessButton->Enable();
+	
 	processesBox->Clear();
 	readyBox->Clear();
 	waitBox->Clear();
 
-	processInputOutput->SetValue(false);
+	processID->SetValue("Process1");
+	processArrivalTime->SetValue(1);
+	processBurstTime->SetValue(3);
+	processPriority->SetValue(1);
+	//processInputOutput->SetValue(false);
+	processAltInputOutput->SetValue(false);
+	quantTime->SetValue(1);
 
 	grid->ClearGrid();
 	grid->SetCellValue(0, 0, "Process ID");
@@ -375,10 +504,11 @@ void MainFrame::onClear(wxCommandEvent& evt)
 
 	createdProcessesVector.clear();
 	finishedProcesses.clear();
-	
-	std::queue<Process> temp;
-	readyQueue = temp;
-	waitQueue = temp;
+	temp.clear();
+
+	std::queue<Process> tempQ;
+	readyQueue = tempQ;
+	waitQueue = tempQ;
 
 	processor->Clear();
 	stepNumber = 0;

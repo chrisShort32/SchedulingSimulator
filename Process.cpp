@@ -11,6 +11,7 @@ Process::Process(std::string id, int arrivalTime, int burstTime, int priority)
 	this->arrivalTime = arrivalTime;
 	this->burstTime = burstTime;
 	this->priority = priority;
+	remainingTime = burstTime;
 	waitForIO = false;
 }
 
@@ -81,4 +82,9 @@ bool operator!=(Process& p1, Process& p2)
 		(p1.getPriority() != p2.getPriority())
 		||
 		(p1.getWaitForIO() != p2.getWaitForIO());
+}
+
+bool operator<(Process& p1, Process& p2)
+{
+	return p1.getArrivalTime() < p2.getArrivalTime();
 }

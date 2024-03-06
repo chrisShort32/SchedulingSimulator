@@ -32,4 +32,5 @@ public:
 
 bool operator == (Process& p1, Process& p2);
 bool operator != (Process& p1, Process& p2);
+bool operator < (Process& p1, Process& p2);
 
