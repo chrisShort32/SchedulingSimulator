@@ -88,3 +88,13 @@ bool operator<(Process& p1, Process& p2)
 {
 	return p1.getArrivalTime() < p2.getArrivalTime();
 }
+
+bool shortest(Process& p1, Process& p2)
+{
+	return p1.getBurstTime() < p2.getBurstTime();
+}
+
+bool highestPriority(Process& p1, Process& p2)
+{
+	return p1.getPriority() > p2.getPriority();
+}

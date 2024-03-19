@@ -13,8 +13,6 @@ public:
 	// Constructor
 	MainFrame(const wxString& title);
 
-	
-
 private:
 	
 	Process CPUprocess;
@@ -32,18 +30,18 @@ private:
 
 	void addProcess();
 	void removeProcess();
-	void vectorToReadyBox();
+	void vectorToReadyBox(std::vector<Process>& v);
 	void sendToCPU();
 	void sendToWaitBox();
 	void sendToReadyBox(Process& process);
-	void finishProcessFCFS();
-	void finishProcessRR();
 	bool checkForIO();
 	void checkWaitQueue();
 	void checkReadyQueue();
-	void onePassFCFS();
-	void onePassRR();
-
+	void sortByShortest();
+	void sortByPriority();
+	void disableButtons();
+	void enableButtons();
+	
 	// Event Handlers
 	void onAddProcess(wxCommandEvent& evt);
 	void onRemoveProcess(wxCommandEvent& evt);
@@ -56,18 +54,24 @@ private:
 	int max(int a, int b);
 
 	/***SCHEDULING ALGORITHMS***/
-	
-	// First Come First Served
-	void fcfs(std::queue<Process>& processes);
-	// Step Version of First Come First Served
-	void fcfsOnePass(std::queue<Process>& processes, int stepNumber);
-	
+	void onePassFCFS();
+	void onePassRR();
+	void onePassSF();
+	void onePassPriority();
+
+	void finishProcessFCFS();
+	void finishProcessRR();
+	void finishProcessSF();
+	void finishProcessPriority();
+
 	/***DATA STRUCTURES***/
 	
-	// Vector to hold created processes
+	// Vectors to hold created processes
 	std::vector<Process> createdProcessesVector;
 	std::vector<Process> finishedProcesses;
-	std::vector<Process> temp;
+	std::vector<Process> tempVector;
+	std::vector<Process> shortestFirst;
+	std::vector<Process> priorityVector;
 	
 	// Queues for holding and displaying Processes
 	std::queue<Process> readyQueue;
@@ -92,9 +96,8 @@ private:
 
 	wxStaticText* quantTimeLabel;
 	
+	wxStaticText* currentTimeLabel;
 	wxStaticText* testCurrentTime;
-
-	
 
 	// Process Modifaction controls
 	wxTextCtrl* processID;
@@ -104,7 +107,6 @@ private:
 	wxCheckBox* processInputOutput;
 	wxCheckBox* processAltInputOutput;
 	wxSpinCtrl* quantTime;
-
 	
 	// Boxes that are physical representations of queues
 	wxListBox* processesBox;
@@ -128,6 +130,5 @@ private:
 	
 	// Results - Average Wait Time
 	wxStaticText* averageWait;
-
 };
 

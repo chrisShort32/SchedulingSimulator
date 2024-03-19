@@ -7,7 +7,7 @@ bool App::OnInit()
 {
 	MainFrame* mainFrame = new MainFrame("Scheduling Simulator");
 
-	mainFrame->SetClientSize(800, 600);
+	mainFrame->SetClientSize(925, 600);
 
 	mainFrame->Center();
 

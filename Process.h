@@ -33,4 +33,6 @@ public:
 bool operator == (Process& p1, Process& p2);
 bool operator != (Process& p1, Process& p2);
 bool operator < (Process& p1, Process& p2);
+bool shortest(Process& p1, Process& p2);
+bool highestPriority(Process& p1, Process& p2);
 
